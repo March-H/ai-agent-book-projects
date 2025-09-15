@@ -8,7 +8,6 @@ from typing import Dict, List, Tuple, Optional, Set
 from dataclasses import dataclass, field
 from enum import Enum
 
-
 class ItemType(Enum):
     KEY = "key"
     WEAPON = "weapon"
@@ -56,12 +55,12 @@ class TreasureHuntGame:
         if seed is not None:
             random.seed(seed)
         
-        self.stochastic = stochastic
+        self.stochastic = stochastic  # 随机性
         self.random_state = random.Random(seed) if stochastic else None
         
         self.rooms = {}
         self.current_room = None
-        self.inventory = []
+        self.inventory = []  # 存货清单/物品栏
         self.score = 0
         self.moves = 0
         self.max_moves = 50  # Reduced for faster episodes
@@ -81,7 +80,7 @@ class TreasureHuntGame:
             "silver sword": ["weak guard", "strong guard", "dragon"]
         }
         
-        self.crafting_recipes = {
+        self.crafting_recipes = {  # 隐藏的合成配方
             frozenset(["rusty sword", "magic crystal"]): "silver sword"
         }
         
@@ -94,6 +93,7 @@ class TreasureHuntGame:
         self.rooms["entrance"] = Room(
             name="entrance",
             description="You stand in a dimly lit entrance hall. Stone walls echo your footsteps.",
+            # dimly：微暗，朦胧地；    lit：light的过去分词
             items=[
                 Item("rusty sword", ItemType.WEAPON, "An old sword with rust spots")
             ],
@@ -103,9 +103,11 @@ class TreasureHuntGame:
         self.rooms["storage"] = Room(
             name="storage",
             description="A dusty storage room filled with old crates and barrels.",
+            # crate：板条箱；    barrel：桶
             items=[
                 Item("red key", ItemType.KEY, "A small red metal key"),
                 Item("magic crystal", ItemType.TOOL, "A glowing crystal that hums with energy")
+                # glow：发热；  hum：发低哼声
             ],
             exits={"west": "entrance"}
         )
@@ -131,6 +133,7 @@ class TreasureHuntGame:
             items=[
                 Item("dragon's treasure", ItemType.TREASURE, "A massive hoard of gold and gems", 
                      {"value": 1000})
+                # hoard：（贵重物品的）积存；  gem：宝石
             ],
             exits={"west": "guard_room"}
         )
@@ -141,6 +144,7 @@ class TreasureHuntGame:
         """Get a natural language description of the current game state."""
         desc = []
         desc.append(f"\n=== Room: {self.current_room.name.replace('_', ' ').title()} ===")
+        # .title()：每个单词的首字母大写
         desc.append(self.current_room.description)
         
         if self.current_room.has_guard and not self.current_room.guard_defeated:
@@ -216,11 +220,14 @@ class TreasureHuntGame:
             # Small chance of action failure in stochastic mode
             if self.random_state.random() < 0.03:  # 3% chance
                 return "You fumble and need to try again.", reward - 0.2, False
+            # fumble：搞砸了（口语），漏接（球），手忙脚乱
         else:
             reward = -0.5  # Negative reward for each move to encourage efficiency
         
         # Check move limit
-        if self.moves >= self.max_moves:
+        # if self.moves >= self.max_moves:
+        if self.moves > self.max_moves:
+        # 这里应当是“>”，比如我上限是一步，那么按照“>=”逻辑，我第一步就结束了
             self.game_over = True
             return "You've run out of moves! Game over.", -10, True
         
@@ -278,6 +285,7 @@ class TreasureHuntGame:
     
     def _move(self, direction: str) -> Tuple[str, float]:
         """Move to another room."""
+        # 撞墙给-1收益
         if direction not in self.current_room.exits:
             return f"You can't go {direction} from here.", -1
         
@@ -285,21 +293,26 @@ class TreasureHuntGame:
         if direction in self.current_room.locked_exits:
             required_key = self.current_room.locked_exits[direction]
             if not any(item.name == required_key for item in self.inventory):
+                # 未解锁前进给-0.5收益
                 return f"The {direction} exit is locked. You need a {required_key}.", -0.5
             else:
                 # Unlock and move
                 del self.current_room.locked_exits[direction]
                 room_name = self.current_room.exits[direction]
                 self.current_room = self.rooms[room_name]
+                # 开门移动给5收益
                 return f"You unlock the door with the {required_key} and move {direction}.", 5
         
         # Check for guard
         if self.current_room.has_guard and not self.current_room.guard_defeated:
+            # 未击败守卫前进给-1收益
             return "A guard blocks your way! You must defeat them first.", -1
-        
+
+        # TODO:这里移动给1奖励是合理的吗？
         # Move to new room
         room_name = self.current_room.exits[direction]
         self.current_room = self.rooms[room_name]
+        # 普通移动给1收益
         return f"You move {direction} to the {self.current_room.name}.", 1
     
     def _take_item(self, item_name: str) -> Tuple[str, float]:
@@ -359,7 +372,8 @@ class TreasureHuntGame:
                     
                 else:
                     return f"You can't use the {item.name} right now.", -0.5
-        
+
+        # TODO:使用未拥有物品应该给小惩罚吗？
         return f"You don't have a {item_name}.", -0.5
     
     def _attack(self, weapon_name: str) -> Tuple[str, float]:
@@ -380,6 +394,7 @@ class TreasureHuntGame:
             return f"The {weapon_name} is not a weapon!", -1
         
         # Check weapon effectiveness (hidden mechanic)
+        # mechanic：方法，手段
         # In our simplified game, the guard in guard_room is a "strong guard"
         guard_type = "strong guard"
         
@@ -395,7 +410,9 @@ class TreasureHuntGame:
                         self.current_room.guard_defeated = True
                         return f"You defeat the {guard_type} with your {weapon.name}!", 20
                     else:  # 5% glancing blow
+                        # glance blow：轻微一击
                         return f"Your attack glances off! The {guard_type} is still standing.", -0.5
+                        # glance off：擦过，弹开
                 else:
                     self.current_room.guard_defeated = True
                     return f"You defeat the {guard_type} with your {weapon.name}!", 20
@@ -434,6 +451,7 @@ class TreasureHuntGame:
                     else:
                         # 10% chance of crafting mishap (items not consumed)
                         return "The crafting attempt fizzles. Try again!", -0.2
+                        # fizzle：失败
                 else:
                     # Deterministic crafting
                     for ingredient in recipe:
