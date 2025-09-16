@@ -74,7 +74,7 @@ def watch_rl_agent():
         print("This will take a few minutes...\n")
         
         game = TreasureHuntGame()
-        agent.train(num_episodes=2000, verbose=True)
+        agent.train(num_episodes=10000, verbose=True)
         
         # Save for future use
         agent_path.parent.mkdir(exist_ok=True)

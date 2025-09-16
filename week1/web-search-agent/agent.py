@@ -107,7 +107,18 @@ class WebSearchAgent:
             temperature=self.temperature,
             tools=self._get_tools()
         )
-        return completion.choices[0]
+        # 设置参数 n = x，返回 x 个备选答案
+        # 未设置时 n = 1，取0就好，返回一个备选答案
+
+        choice = completion.choices[0]
+        usage = completion.usage
+
+        if choice.finish_reason == "stop":
+            print(f"chat_prompt_tokens:          {usage.prompt_tokens}")
+            print(f"chat_completion_tokens:      {usage.completion_tokens}")
+            print(f"chat_total_tokens:           {usage.total_tokens}")
+
+        return choice
 
     def search_and_answer(self, user_question: str, max_iterations: int = 5) -> str:
         """
@@ -158,6 +169,8 @@ class WebSearchAgent:
                         logger.info(f"执行工具: {tool_call_name}, 参数: {tool_call_arguments}")
                         
                         if tool_call_name == "$web_search":
+                            search_content_total_tokens = tool_call_arguments.get("usage", {}).get("total_tokens")
+                            print(f"search_content_total_tokens: {search_content_total_tokens}")
                             # 调用搜索实现
                             tool_result = search_impl(tool_call_arguments)
                         else:

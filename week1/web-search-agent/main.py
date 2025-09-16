@@ -14,6 +14,7 @@ logging.basicConfig(
     format=Config.LOG_FORMAT
 )
 logger = logging.getLogger(__name__)
+# __name__代表模块名，如果是python启动的，那么__name__ == "__main__"，如果是模块导入的，那么__name__ == 模块名
 
 
 def run_interactive_mode(agent: WebSearchAgent):
