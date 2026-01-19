@@ -4,3 +4,8 @@ node_modules
 results/
 .*
 *.log
+output/
+user-memory/data/
+document_store.json
+trajectory.json
+arena_data.json
